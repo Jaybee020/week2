@@ -45,19 +45,19 @@ describe("MerkleTree", function () {
     });
 
     it("Insert two new leaves and verify the first leaf in an inclusion proof", async function () {
+        // console.log(await await merkleTree.getRoot())
         await merkleTree.insertLeaf(1);
         await merkleTree.insertLeaf(2);
 
         const node9 = (await merkleTree.hashes(9)).toString();
         const node13 = (await merkleTree.hashes(13)).toString();
-
         const Input = {
             "leaf": "1",
             "path_elements": ["2", node9, node13],
-            "path_index": ["0", "0", "0"]
+            "path_index": ["0", "0", "0"],
         }
-        const { proof, publicSignals } = await groth16.fullProve(Input, "circuits/circuit_js/circuit.wasm","circuits/circuit_final.zkey");
-
+        var { proof, publicSignals } = await groth16.fullProve(Input, "circuits/circuit_js/circuit.wasm","circuits/circuit_final.zkey");
+        console.log(publicSignals[0])
         const editedPublicSignals = unstringifyBigInts(publicSignals);
         const editedProof = unstringifyBigInts(proof);
         const calldata = await groth16.exportSolidityCallData(editedProof, editedPublicSignals);
@@ -72,5 +72,28 @@ describe("MerkleTree", function () {
         expect(await merkleTree.verify(a, b, c, input)).to.be.true;
 
         // [bonus] verify the second leaf with the inclusion proof
+
+        const inputObj={
+            "leaf":"2",
+            "path_elements":["1",node9,node13],
+            "path_index":["1","0","0"]
+        }
+
+        var { proof, publicSignals } = await groth16.fullProve(inputObj, "circuits/circuit_js/circuit.wasm","circuits/circuit_final.zkey");
+        const _editedPublicSignals = unstringifyBigInts(publicSignals);
+        const _editedProof = unstringifyBigInts(proof);
+        const _calldata = await groth16.exportSolidityCallData(_editedProof, _editedPublicSignals);
+    
+        const _argv = _calldata.replace(/["[\]\s]/g, "").split(',').map(x => BigInt(x).toString());
+    
+        const _a = [_argv[0], _argv[1]];
+        const _b = [[_argv[2], _argv[3]], [_argv[4], _argv[5]]];
+        const _c = [_argv[6], _argv[7]];
+        const _input = _argv.slice(8);
+
+        expect(await merkleTree.verify(_a, _b, _c, _input)).to.be.true;
+
+        
+
     });
 });
